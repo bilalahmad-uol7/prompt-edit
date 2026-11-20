@@ -67,10 +67,14 @@ class PixelforgeClient
             'end_date' => $to->toDateString(),
         ]));
 
-        return collect($response->json('data', []))
-            ->map(fn (array $row) => UsageDay::fromArray($row))
-            ->keyBy(fn (UsageDay $day) => $day->date)
-            ->all();
+        $days = [];
+
+        foreach ((array) $response->json('data', []) as $row) {
+            $day = UsageDay::fromArray((array) $row);
+            $days[$day->date] = $day;
+        }
+
+        return $days;
     }
 
     /**

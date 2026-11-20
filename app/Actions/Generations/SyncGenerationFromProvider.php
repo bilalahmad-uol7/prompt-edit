@@ -35,7 +35,7 @@ class SyncGenerationFromProvider
     public function handle(GenerationData $data, ?Generation $knownGeneration = null): ?Generation
     {
         return DB::transaction(function () use ($data, $knownGeneration) {
-            $generation = $this->findAndLock($data, $knownGeneration?->id ?? $data->localId());
+            $generation = $this->findAndLock($data, $knownGeneration->id ?? $data->localId());
 
             if ($generation === null) {
                 Log::warning('Pixelforge reported an unknown generation', ['provider_id' => $data->id, 'local_id' => $data->localId()]);

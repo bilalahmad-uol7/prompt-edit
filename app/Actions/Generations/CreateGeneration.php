@@ -2,9 +2,8 @@
 
 namespace App\Actions\Generations;
 
+use App\Data\GenerationInput;
 use App\Enums\GenerationStatus;
-use App\Enums\ImageQuality;
-use App\Enums\ImageSize;
 use App\Exceptions\InsufficientCreditsException;
 use App\Jobs\SubmitGenerationToPixelforge;
 use App\Models\Generation;
@@ -25,26 +24,22 @@ class CreateGeneration
     ) {}
 
     /**
-     * @param  array{prompt: string, size: string, quality: string, reference_images?: list<string>, client_request_id?: string|null}  $input
-     *
      * @throws InsufficientCreditsException
      * @throws PixelforgeException when pricing is unavailable
      */
-    public function handle(User $user, array $input): Generation
+    public function handle(User $user, GenerationInput $input): Generation
     {
         $pricing = $this->pricing->current();
-        $size = ImageSize::from($input['size']);
-        $quality = ImageQuality::from($input['quality']);
-        $referenceImages = array_values($input['reference_images'] ?? []);
-        $clientRequestId = $input['client_request_id'] ?? null;
 
-        $estimate = $this->estimator->estimate($input['prompt'], $size, $quality, count($referenceImages), $pricing);
+        $estimate = $this->estimator->estimate($input->prompt, $input->size, $input->quality, count($input->referenceImages), $pricing);
 
-        $generation = DB::transaction(function () use ($user, $input, $size, $quality, $referenceImages, $clientRequestId, $estimate, $pricing) {
+        $generation = DB::transaction(function () use ($user, $input, $estimate, $pricing) {
             // Serialise spending per user so two tabs cannot both spend the same credit.
             $user = User::query()->lockForUpdate()->findOrFail($user->id);
 
-            $duplicate = $clientRequestId === null ? null : $user->generations()->where('client_request_id', $clientRequestId)->first();
+            $duplicate = $input->clientRequestId === null
+                ? null
+                : $user->generations()->where('client_request_id', $input->clientRequestId)->first();
 
             if ($duplicate !== null) {
                 return $duplicate;
@@ -57,12 +52,12 @@ class CreateGeneration
             }
 
             return $user->generations()->create([
-                'client_request_id' => $clientRequestId,
+                'client_request_id' => $input->clientRequestId,
                 'status' => GenerationStatus::Pending,
-                'prompt' => $input['prompt'],
-                'size' => $size,
-                'quality' => $quality,
-                'reference_images' => $referenceImages,
+                'prompt' => $input->prompt,
+                'size' => $input->size,
+                'quality' => $input->quality,
+                'reference_images' => $input->referenceImages,
                 'estimated_min_charge_nanos' => $estimate->minCharge,
                 'estimated_max_charge_nanos' => $estimate->maxCharge,
                 // Replaced by the rates Pixelforge fixes at creation once it accepts the generation.

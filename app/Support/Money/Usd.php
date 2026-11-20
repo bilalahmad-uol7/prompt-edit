@@ -108,6 +108,8 @@ final readonly class Usd implements Castable, JsonSerializable, Stringable
 
     /**
      * Human readable amount for flash messages and logs, e.g. "$0.3739".
+     *
+     * @param  int<0, 9>  $decimals
      */
     public function format(int $decimals = 4): string
     {

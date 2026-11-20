@@ -34,7 +34,7 @@ use Illuminate\Support\Facades\Storage;
  * @property Usd $estimated_max_charge_nanos
  * @property Usd|null $provider_cost_nanos
  * @property Usd|null $charged_nanos
- * @property array<string, string>|null $rates
+ * @property array{input_text_tokens: string, input_image_tokens: string, output_tokens: string, reasoning_tokens: string}|null $rates
  * @property int|null $input_text_tokens
  * @property int|null $input_image_tokens
  * @property int|null $output_tokens
