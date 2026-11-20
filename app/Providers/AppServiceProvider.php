@@ -6,8 +6,10 @@ use App\Services\Billing\CostCalculator;
 use App\Services\Billing\PricingRepository;
 use App\Services\Pixelforge\PixelforgeClient;
 use Carbon\CarbonImmutable;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 
@@ -42,6 +44,18 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+        $this->configureRateLimiting();
+    }
+
+    /**
+     * Pixelforge allows 60 requests per minute per account. Submission jobs are throttled
+     * below that so we rarely hit the limit; when we do, the job waits for Retry-After.
+     */
+    protected function configureRateLimiting(): void
+    {
+        RateLimiter::for('pixelforge', fn (): Limit => Limit::perMinute(config('pixelforge.submission.requests_per_minute')));
+
+        RateLimiter::for('generations', fn ($request): Limit => Limit::perMinute(20)->by($request->user()?->id ?: $request->ip()));
     }
 
     /**

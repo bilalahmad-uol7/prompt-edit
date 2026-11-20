@@ -49,3 +49,30 @@ function pixelforgeGeneration(array $overrides = []): array
         'completed_at' => null,
     ], $overrides);
 }
+
+/**
+ * Build a Pixelforge webhook event around a generation object.
+ *
+ * @param  array<string, mixed>  $generation
+ * @return array<string, mixed>
+ */
+function pixelforgeEvent(string $type, array $generation, ?string $eventId = null): array
+{
+    return [
+        'id' => $eventId ?? 'evt_'.Str::random(20),
+        'object' => 'event',
+        'type' => $type,
+        'created_at' => now()->toIso8601ZuluString(),
+        'data' => ['object' => $generation],
+    ];
+}
+
+/**
+ * The Pixelforge-Signature header for a raw body, as Pixelforge computes it.
+ */
+function pixelforgeSignature(string $body, ?int $timestamp = null, string $secret = 'whsec_test_secret'): string
+{
+    $timestamp ??= now()->getTimestamp();
+
+    return "t={$timestamp},v1=".hash_hmac('sha256', "{$timestamp}.{$body}", $secret);
+}
