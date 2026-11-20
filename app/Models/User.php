@@ -73,6 +73,11 @@ class User extends Authenticatable
         return $this->hasMany(CreditTransaction::class);
     }
 
+    public function hasGenerationsInFlight(): bool
+    {
+        return $this->generations()->inFlight()->exists();
+    }
+
     /**
      * Credit reserved by generations that have not settled yet (their maximum possible charge).
      */

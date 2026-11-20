@@ -4,11 +4,8 @@ namespace App\Actions\Generations;
 
 use App\Enums\GenerationStatus;
 use App\Models\Generation;
-use App\Services\Pixelforge\Exceptions\PixelforgeConnectionException;
 use App\Services\Pixelforge\Exceptions\PixelforgeException;
-use App\Services\Pixelforge\Exceptions\PixelforgeRequestException;
 use App\Services\Pixelforge\PixelforgeClient;
-use App\Services\Pixelforge\PixelforgeErrorCode;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -59,53 +56,42 @@ class SubmitGeneration
         return null;
     }
 
+    /**
+     * Transient failures are retried later; anything else fails the generation for free.
+     *
+     * @return int|null seconds to wait before retrying, or null when the generation was failed
+     */
     private function handleFailure(Generation $generation, PixelforgeException $e): ?int
     {
+        $context = ['generation' => $generation->id, 'attempt' => $generation->submit_attempts, 'reason' => $e->getMessage()];
+
         if ($e->isRetryable()) {
-            $delay = $this->backoff($generation, $e);
+            $delay = $this->backoff($generation->submit_attempts, $e->retryAfter());
 
-            $generation->update([
-                'error_code' => $e instanceof PixelforgeRequestException ? $e->rawCode : 'provider_unreachable',
-                'retry_at' => now()->addSeconds($delay),
-            ]);
-
-            Log::info('Pixelforge submission deferred', [
-                'generation' => $generation->id,
-                'attempt' => $generation->submit_attempts,
-                'retry_in' => $delay,
-                'reason' => $e->getMessage(),
-            ]);
+            // The reason is shown to the user while they wait (e.g. "Waiting for a free slot").
+            $generation->update(['error_code' => $e->reason(), 'retry_at' => now()->addSeconds($delay)]);
+            Log::info('Pixelforge submission deferred', [...$context, 'retry_in' => $delay]);
 
             return $delay;
         }
 
-        $context = ['generation' => $generation->id, 'reason' => $e->getMessage()];
+        $e->indicatesIntegrationProblem()
+            ? Log::critical('Pixelforge rejected a submission because of our integration', $context)
+            : Log::warning('Pixelforge rejected a submission', $context);
 
-        // These mean our integration is misconfigured or buggy, not that the user did something wrong.
-        if ($e instanceof PixelforgeRequestException && in_array($e->errorCode, [PixelforgeErrorCode::InvalidApiKey, PixelforgeErrorCode::IdempotencyKeyReused, null], true)) {
-            Log::critical('Pixelforge rejected a submission unexpectedly', $context);
-        } else {
-            Log::warning('Pixelforge rejected a submission', $context);
-        }
-
-        $this->fail->handle(
-            $generation,
-            code: $e instanceof PixelforgeRequestException ? $e->rawCode : 'provider_unreachable',
-            message: $e instanceof PixelforgeRequestException ? $e->userMessage() : 'Could not reach the image provider. You were not charged.',
-        );
+        $this->fail->handle($generation, code: $e->reason(), message: $e->userMessage());
 
         return null;
     }
 
     /**
-     * Respect Retry-After, then back off further on each attempt, with jitter so queued
-     * generations do not all retry in the same second.
+     * Respect Retry-After, back off further on each attempt (capped), and add jitter so
+     * waiting generations do not all retry in the same second.
      */
-    private function backoff(Generation $generation, PixelforgeException $e): int
+    private function backoff(int $attempt, int $retryAfter): int
     {
-        $exponential = min(self::MAX_BACKOFF_SECONDS, 2 ** max(0, $generation->submit_attempts - 1));
-        $minimum = $e instanceof PixelforgeConnectionException ? $exponential : max($e->retryAfter(), $exponential);
+        $exponential = min(self::MAX_BACKOFF_SECONDS, 2 ** max(0, $attempt - 1));
 
-        return $minimum + random_int(0, 2);
+        return max($retryAfter, $exponential) + random_int(0, 2);
     }
 }

@@ -57,16 +57,16 @@ class StoreGenerationRequest extends FormRequest
         );
     }
 
+    /**
+     * The form always submits its URL rows. Laravel's input middleware has already trimmed them
+     * and turned blank ones into null; those blank rows are not reference images.
+     */
     protected function prepareForValidation(): void
     {
         $references = $this->input('reference_images');
 
-        $this->merge([
-            'prompt' => is_string($this->input('prompt')) ? trim($this->input('prompt')) : $this->input('prompt'),
-            // The form always submits its rows; empty rows are not reference images.
-            'reference_images' => is_array($references)
-                ? array_values(array_filter(array_map(fn ($url) => is_string($url) ? trim($url) : $url, $references), fn ($url) => $url !== '' && $url !== null))
-                : $references,
-        ]);
+        if (is_array($references)) {
+            $this->merge(['reference_images' => array_values(array_filter($references, fn (mixed $url) => $url !== null))]);
+        }
     }
 }

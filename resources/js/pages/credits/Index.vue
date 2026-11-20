@@ -5,9 +5,12 @@ import { computed } from 'vue';
 import CreditController from '@/actions/App/Http/Controllers/CreditController';
 import Heading from '@/components/Heading.vue';
 import MoneyAmount from '@/components/MoneyAmount.vue';
+import PaginationLinks from '@/components/PaginationLinks.vue';
+import StatCard from '@/components/StatCard.vue';
 import { Button } from '@/components/ui/button';
 import { formatUsd, isNegative } from '@/lib/money';
 import { index } from '@/routes/credits';
+import type { Paginated } from '@/types';
 
 type Transaction = {
     id: number;
@@ -19,17 +22,9 @@ type Transaction = {
     created_at: string;
 };
 
-type Paginator<T> = {
-    data: T[];
-    prev_page_url: string | null;
-    next_page_url: string | null;
-    current_page: number;
-    last_page: number;
-};
-
 defineProps<{
     packs: string[];
-    transactions: Paginator<Transaction>;
+    transactions: Paginated<Transaction>;
 }>();
 
 defineOptions({
@@ -52,26 +47,12 @@ const credits = computed(() => page.props.credits);
         />
 
         <div class="grid gap-4 sm:grid-cols-3">
-            <div class="rounded-xl border bg-card p-5">
-                <p class="text-sm text-muted-foreground">Available</p>
-                <p class="mt-1 text-2xl font-semibold">
-                    <MoneyAmount :amount="credits?.available" />
-                </p>
-            </div>
-            <div class="rounded-xl border bg-card p-5">
-                <p class="text-sm text-muted-foreground">
-                    Held for running generations
-                </p>
-                <p class="mt-1 text-2xl font-semibold">
-                    <MoneyAmount :amount="credits?.held" />
-                </p>
-            </div>
-            <div class="rounded-xl border bg-card p-5">
-                <p class="text-sm text-muted-foreground">Balance</p>
-                <p class="mt-1 text-2xl font-semibold">
-                    <MoneyAmount :amount="credits?.balance" />
-                </p>
-            </div>
+            <StatCard label="Available" :amount="credits?.available" />
+            <StatCard
+                label="Held for running generations"
+                :amount="credits?.held"
+            />
+            <StatCard label="Balance" :amount="credits?.balance" />
         </div>
 
         <section class="space-y-3">
@@ -167,39 +148,10 @@ const credits = computed(() => page.props.credits);
                     </tbody>
                 </table>
             </div>
-            <div
-                v-if="transactions.last_page > 1"
-                class="flex justify-end gap-2"
-            >
-                <Button
-                    variant="outline"
-                    size="sm"
-                    :disabled="!transactions.prev_page_url"
-                    as-child
-                >
-                    <Link
-                        v-if="transactions.prev_page_url"
-                        :href="transactions.prev_page_url"
-                        preserve-scroll
-                        >Previous</Link
-                    >
-                    <span v-else>Previous</span>
-                </Button>
-                <Button
-                    variant="outline"
-                    size="sm"
-                    :disabled="!transactions.next_page_url"
-                    as-child
-                >
-                    <Link
-                        v-if="transactions.next_page_url"
-                        :href="transactions.next_page_url"
-                        preserve-scroll
-                        >Next</Link
-                    >
-                    <span v-else>Next</span>
-                </Button>
-            </div>
+            <PaginationLinks
+                :links="transactions.links"
+                :meta="transactions.meta"
+            />
         </section>
     </div>
 </template>

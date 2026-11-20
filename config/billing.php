@@ -11,7 +11,7 @@ return [
     // Fake credit packs offered by the "Buy credits" page (USD, exact decimal strings).
     'credit_packs' => ['1.00', '5.00', '20.00'],
 
-    // How long a quote is cached for the pricing table (seconds): fresh, then served stale while refreshing.
+    // How long GET /v1/pricing is cached (seconds): fresh for the first value, then served stale while refreshing.
     'pricing_cache' => [
         'fresh' => 300,
         'stale' => 3600,

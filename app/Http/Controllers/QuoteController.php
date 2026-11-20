@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Http\Requests\QuoteGenerationRequest;
 use App\Services\Billing\CostEstimator;
 use App\Services\Billing\PricingRepository;
-use App\Services\Pixelforge\Exceptions\PixelforgeException;
 use Illuminate\Http\JsonResponse;
 
 /**
@@ -16,17 +15,9 @@ class QuoteController extends Controller
 {
     public function __invoke(QuoteGenerationRequest $request, PricingRepository $pricing, CostEstimator $estimator): JsonResponse
     {
-        try {
-            $currentPricing = $pricing->current();
-        } catch (PixelforgeException $e) {
-            report($e);
-
-            return response()->json(['message' => 'Live pricing is temporarily unavailable.'], 503);
-        }
-
         $input = $request->toInput();
 
-        $estimate = $estimator->estimate($input->prompt, $input->size, $input->quality, count($input->referenceImages), $currentPricing);
+        $estimate = $estimator->estimate($input->prompt, $input->size, $input->quality, count($input->referenceImages), $pricing->current());
 
         $available = $request->user()->availableBalance();
 

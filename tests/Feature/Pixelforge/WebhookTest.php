@@ -3,6 +3,7 @@
 use App\Enums\CreditTransactionType;
 use App\Enums\GenerationStatus;
 use App\Jobs\StoreGenerationImage;
+use App\Jobs\SubmitGenerationToPixelforge;
 use App\Models\Generation;
 use App\Models\User;
 use App\Models\WebhookEvent;
@@ -220,7 +221,7 @@ it('records provider cost but does not charge when we had already told the user 
     $user = User::factory()->withBalance('1.00')->create();
     $generation = Generation::factory()->for($user)->create([
         'status' => GenerationStatus::Failed,
-        'error_code' => 'submission_abandoned',
+        'error_code' => SubmitGenerationToPixelforge::ABANDONED,
         'charged_nanos' => 0,
         'provider_cost_nanos' => 0,
     ]);

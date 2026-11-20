@@ -96,9 +96,7 @@ watch(
 watch(() => credits.value?.available, refreshQuote);
 
 const estimate = computed(() => quote.response);
-const creditsError = computed(
-    () => (form.errors as Record<string, string | undefined>).credits,
-);
+// Server-side refusals (e.g. credit spent in another tab) arrive as an error toast.
 const cannotAfford = computed(
     () => estimate.value !== null && !estimate.value.affordable,
 );
@@ -360,15 +358,11 @@ useLiveUpdates(() => props.hasInFlight, ['recent', 'hasInFlight']);
                         />
                     </div>
 
-                    <Alert
-                        v-if="cannotAfford || creditsError"
-                        variant="destructive"
-                    >
+                    <Alert v-if="cannotAfford" variant="destructive">
                         <CircleAlert />
                         <AlertTitle>Not enough credit</AlertTitle>
                         <AlertDescription>
-                            <span v-if="creditsError">{{ creditsError }}</span>
-                            <span v-else>
+                            <span>
                                 This generation can cost up to
                                 <MoneyAmount :amount="estimate?.max_charge" />.
                             </span>

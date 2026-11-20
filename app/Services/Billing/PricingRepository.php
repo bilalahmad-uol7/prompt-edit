@@ -2,6 +2,7 @@
 
 namespace App\Services\Billing;
 
+use App\Exceptions\PricingUnavailableException;
 use App\Services\Pixelforge\Data\Pricing;
 use App\Services\Pixelforge\Exceptions\PixelforgeException;
 use App\Services\Pixelforge\PixelforgeClient;
@@ -27,14 +28,14 @@ class PricingRepository
     ) {}
 
     /**
-     * @throws PixelforgeException when pricing was never fetched and Pixelforge is unreachable
+     * @throws PricingUnavailableException when Pixelforge is unreachable and pricing was never fetched
      */
     public function current(): Pricing
     {
         try {
             $payload = Cache::flexible(self::CACHE_KEY, [$this->freshSeconds, $this->staleSeconds], fn () => $this->fetch());
         } catch (PixelforgeException $e) {
-            $payload = Cache::get(self::LAST_KNOWN_KEY) ?? throw $e;
+            $payload = Cache::get(self::LAST_KNOWN_KEY) ?? throw new PricingUnavailableException($e);
         }
 
         return Pricing::fromArray($payload);

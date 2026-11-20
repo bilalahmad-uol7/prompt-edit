@@ -19,4 +19,14 @@ class PixelforgeConnectionException extends PixelforgeException
     {
         return 5;
     }
+
+    public function reason(): string
+    {
+        return 'provider_unreachable';
+    }
+
+    public function userMessage(): string
+    {
+        return 'Could not reach the image provider. You were not charged.';
+    }
 }

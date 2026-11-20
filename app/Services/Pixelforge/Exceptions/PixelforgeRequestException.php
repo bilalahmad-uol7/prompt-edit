@@ -55,8 +55,18 @@ class PixelforgeRequestException extends PixelforgeException
         return $this->retryAfterHeader ?? $this->errorCode?->defaultRetryAfter() ?? 5;
     }
 
+    public function reason(): string
+    {
+        return $this->rawCode;
+    }
+
     public function userMessage(): string
     {
         return $this->errorCode?->userMessage() ?? 'The image provider rejected the request. You were not charged.';
+    }
+
+    public function indicatesIntegrationProblem(): bool
+    {
+        return $this->errorCode === null || $this->errorCode->indicatesIntegrationProblem();
     }
 }

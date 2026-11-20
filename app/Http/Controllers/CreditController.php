@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\CreditTransactionType;
-use App\Models\CreditTransaction;
+use App\Http\Resources\CreditTransactionResource;
 use App\Services\Billing\CreditLedger;
 use App\Support\Money\Usd;
 use Illuminate\Http\RedirectResponse;
@@ -19,20 +19,11 @@ class CreditController extends Controller
         $transactions = $request->user()->creditTransactions()
             ->with('generation:id,prompt')
             ->latest('id')
-            ->paginate(15)
-            ->through(fn (CreditTransaction $transaction) => [
-                'id' => $transaction->id,
-                'type' => $transaction->type->value,
-                'label' => $transaction->type->label(),
-                'amount' => $transaction->amount_nanos->toDecimal(),
-                'balance_after' => $transaction->balance_after_nanos->toDecimal(),
-                'prompt' => $transaction->generation?->prompt,
-                'created_at' => $transaction->created_at->toIso8601String(),
-            ]);
+            ->paginate(15);
 
         return Inertia::render('credits/Index', [
             'packs' => config('billing.credit_packs'),
-            'transactions' => $transactions,
+            'transactions' => CreditTransactionResource::collection($transactions),
         ]);
     }
 

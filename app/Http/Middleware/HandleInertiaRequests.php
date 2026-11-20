@@ -41,12 +41,30 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
             ],
-            'credits' => fn (): ?array => $request->user() === null ? null : [
-                'balance' => $request->user()->balance_nanos->toDecimal(),
-                'held' => $request->user()->heldBalance()->toDecimal(),
-                'available' => $request->user()->availableBalance()->toDecimal(),
-            ],
+            'credits' => fn (): ?array => $this->credits($request),
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+        ];
+    }
+
+    /**
+     * The signed-in user's credit, shown in the sidebar and used by the generate form.
+     *
+     * @return array{balance: string, held: string, available: string}|null
+     */
+    private function credits(Request $request): ?array
+    {
+        $user = $request->user();
+
+        if ($user === null) {
+            return null;
+        }
+
+        $held = $user->heldBalance();
+
+        return [
+            'balance' => $user->balance_nanos->toDecimal(),
+            'held' => $held->toDecimal(),
+            'available' => $user->balance_nanos->minus($held)->toDecimal(),
         ];
     }
 }

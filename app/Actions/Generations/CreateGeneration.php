@@ -5,12 +5,12 @@ namespace App\Actions\Generations;
 use App\Data\GenerationInput;
 use App\Enums\GenerationStatus;
 use App\Exceptions\InsufficientCreditsException;
+use App\Exceptions\PricingUnavailableException;
 use App\Jobs\SubmitGenerationToPixelforge;
 use App\Models\Generation;
 use App\Models\User;
 use App\Services\Billing\CostEstimator;
 use App\Services\Billing\PricingRepository;
-use App\Services\Pixelforge\Exceptions\PixelforgeException;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -25,7 +25,7 @@ class CreateGeneration
 
     /**
      * @throws InsufficientCreditsException
-     * @throws PixelforgeException when pricing is unavailable
+     * @throws PricingUnavailableException
      */
     public function handle(User $user, GenerationInput $input): Generation
     {

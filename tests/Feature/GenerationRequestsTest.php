@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\GenerationStatus;
+use App\Exceptions\PricingUnavailableException;
 use App\Jobs\SubmitGenerationToPixelforge;
 use App\Models\Generation;
 use App\Models\User;
@@ -100,7 +101,7 @@ it('blocks generating when the maximum cost exceeds available credit', function 
 
     $this->actingAs($user)
         ->post(route('generations.store'), generationInput())
-        ->assertSessionHasErrors('credits');
+        ->assertInertiaFlash('toast.type', 'error');
 
     expect(Generation::count())->toBe(0);
     Queue::assertNothingPushed();
@@ -111,7 +112,7 @@ it('counts credit held by running generations', function () {
     $user = User::factory()->withBalance('0.10')->create();
 
     $this->actingAs($user)->post(route('generations.store'), generationInput())->assertSessionHasNoErrors();
-    $this->actingAs($user)->post(route('generations.store'), generationInput())->assertSessionHasErrors('credits');
+    $this->actingAs($user)->post(route('generations.store'), generationInput())->assertInertiaFlash('toast.type', 'error');
 
     expect(Generation::count())->toBe(1);
 });
@@ -131,7 +132,7 @@ it('pauses generating when pricing cannot be loaded', function () {
     $this->pricingAvailable = false;
     $user = User::factory()->withBalance('1.00')->create();
 
-    $this->actingAs($user)->post(route('generations.store'), generationInput())->assertSessionHasErrors('prompt');
+    $this->actingAs($user)->post(route('generations.store'), generationInput())->assertInertiaFlash('toast.message', PricingUnavailableException::MESSAGE);
     $this->actingAs($user)->get(route('generations.create'))
         ->assertInertia(fn (Assert $page) => $page->whereType('pricingError', 'string'));
 
@@ -148,6 +149,15 @@ it('quotes the price range and affordability', function () {
             'affordable' => false,
             'max_tokens' => ['input_text_tokens' => 115, 'input_image_tokens' => 1530, 'output_tokens' => 6450, 'reasoning_tokens' => 8000],
         ]);
+});
+
+it('answers the quote endpoint with 503 when pricing is unavailable', function () {
+    $this->pricingAvailable = false;
+
+    $this->actingAs(User::factory()->create())
+        ->postJson(route('generations.quote'), ['prompt' => 'x', 'size' => '1024x1024', 'quality' => 'low'])
+        ->assertStatus(503)
+        ->assertJsonPath('message', PricingUnavailableException::MESSAGE);
 });
 
 it('quotes an empty prompt while the user is still typing', function () {
@@ -197,6 +207,18 @@ it('retries a failed generation once, with the same settings', function () {
     expect($retry->status)->toBe(GenerationStatus::Pending)
         ->and($retry->prompt)->toBe($failed->prompt)
         ->and($retry->quality->value)->toBe('low');
+});
+
+it('tells the user when a retry cannot be afforded', function () {
+    $user = User::factory()->withBalance('0.01')->create();
+    $failed = Generation::factory()->for($user)->failed('internal_error')->create();
+
+    $this->actingAs($user)
+        ->post(route('generations.retry', $failed))
+        ->assertRedirect()
+        ->assertInertiaFlash('toast.type', 'error');
+
+    expect(Generation::count())->toBe(1);
 });
 
 it('does not let users retry generations that are not theirs or not failed', function () {

@@ -146,6 +146,6 @@ it('marks the generation as failed when the job gives up', function () {
     (new SubmitGenerationToPixelforge($generation))->failed(new RuntimeException('timed out'));
 
     expect($generation->refresh()->status)->toBe(GenerationStatus::Failed)
-        ->and($generation->error_code)->toBe('submission_abandoned')
+        ->and($generation->error_code)->toBe(SubmitGenerationToPixelforge::ABANDONED)
         ->and($generation->charged_nanos->isZero())->toBeTrue();
 });

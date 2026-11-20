@@ -29,6 +29,22 @@ enum PixelforgeErrorCode: string
     }
 
     /**
+     * Errors caused by our integration rather than by the request: worth alerting on.
+     */
+    public function indicatesIntegrationProblem(): bool
+    {
+        return in_array($this, [self::InvalidApiKey, self::IdempotencyKeyReused, self::DateRangeTooLong], true);
+    }
+
+    /**
+     * Failures where submitting the same request again cannot help.
+     */
+    public function isPermanent(): bool
+    {
+        return in_array($this, [self::ContentPolicyViolation, self::ValidationFailed], true);
+    }
+
+    /**
      * Seconds to wait when the response carries no Retry-After header.
      */
     public function defaultRetryAfter(): int

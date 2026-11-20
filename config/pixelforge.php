@@ -29,9 +29,6 @@ return [
     ],
 
     'submission' => [
-        // Upper bound on attempts to get a generation accepted (rate limits, overloads, timeouts).
-        'max_attempts' => (int) env('PIXELFORGE_SUBMIT_MAX_ATTEMPTS', 12),
-
         // Give up on getting a generation accepted after this many minutes.
         'give_up_after_minutes' => (int) env('PIXELFORGE_SUBMIT_GIVE_UP_AFTER', 15),
 

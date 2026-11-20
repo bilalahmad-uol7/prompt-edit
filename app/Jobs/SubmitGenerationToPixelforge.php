@@ -21,6 +21,15 @@ class SubmitGenerationToPixelforge implements ShouldQueue
 {
     use Queueable;
 
+    /**
+     * Stored on generations we stopped trying to submit. A late webhook for one of these is still
+     * accepted (see SyncGenerationFromProvider) but never charged.
+     */
+    public const string ABANDONED = 'submission_abandoned';
+
+    /**
+     * Unexpected errors (not "wait and retry") tolerated before giving up.
+     */
     public int $maxExceptions = 3;
 
     public function __construct(public Generation $generation) {}
@@ -54,7 +63,7 @@ class SubmitGenerationToPixelforge implements ShouldQueue
     {
         app(FailGeneration::class)->handle(
             $this->generation,
-            code: 'submission_abandoned',
+            code: self::ABANDONED,
             message: 'The image provider stayed busy for too long, so we stopped trying. You were not charged.',
         );
     }

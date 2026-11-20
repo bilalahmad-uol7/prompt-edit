@@ -4,6 +4,7 @@ import { CircleAlert, CircleCheck, TriangleAlert } from '@lucide/vue';
 import ReportController from '@/actions/App/Http/Controllers/Admin/ReportController';
 import Heading from '@/components/Heading.vue';
 import MoneyAmount from '@/components/MoneyAmount.vue';
+import StatCard from '@/components/StatCard.vue';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -103,40 +104,19 @@ defineOptions({
         </Alert>
 
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div class="rounded-xl border bg-card p-5">
-                <p class="text-sm text-muted-foreground">
-                    Credit spend (charged)
-                </p>
-                <p class="mt-1 text-2xl font-semibold">
-                    <MoneyAmount :amount="report.totals.charged" />
-                </p>
-            </div>
-            <div class="rounded-xl border bg-card p-5">
-                <p class="text-sm text-muted-foreground">
-                    Provider cost (our records)
-                </p>
-                <p class="mt-1 text-2xl font-semibold">
-                    <MoneyAmount :amount="report.totals.provider_cost" />
-                </p>
-            </div>
-            <div class="rounded-xl border bg-card p-5">
-                <p class="text-sm text-muted-foreground">
-                    Provider cost (Pixelforge)
-                </p>
-                <p class="mt-1 text-2xl font-semibold">
-                    <MoneyAmount
-                        v-if="report.totals.pixelforge_cost !== null"
-                        :amount="report.totals.pixelforge_cost"
-                    />
-                    <span v-else class="text-muted-foreground">—</span>
-                </p>
-            </div>
-            <div class="rounded-xl border bg-card p-5">
-                <p class="text-sm text-muted-foreground">Profit</p>
-                <p class="mt-1 text-2xl font-semibold">
-                    <MoneyAmount :amount="report.totals.profit" />
-                </p>
-            </div>
+            <StatCard
+                label="Credit spend (charged)"
+                :amount="report.totals.charged"
+            />
+            <StatCard
+                label="Provider cost (our records)"
+                :amount="report.totals.provider_cost"
+            />
+            <StatCard
+                label="Provider cost (Pixelforge)"
+                :amount="report.totals.pixelforge_cost"
+            />
+            <StatCard label="Profit" :amount="report.totals.profit" />
         </div>
 
         <div class="overflow-x-auto rounded-xl border">

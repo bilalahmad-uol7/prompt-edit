@@ -14,15 +14,12 @@ use Illuminate\Http\Resources\Json\JsonResource;
 class GenerationResource extends JsonResource
 {
     /**
-     * Failures that a plain retry will not fix.
-     */
-    private const array PERMANENT_FAILURES = ['content_policy_violation', 'validation_failed'];
-
-    /**
      * @return array<string, mixed>
      */
     public function toArray(Request $request): array
     {
+        $errorCode = PixelforgeErrorCode::tryFrom((string) $this->error_code);
+
         return [
             'id' => $this->id,
             'status' => $this->status->value,
@@ -34,12 +31,12 @@ class GenerationResource extends JsonResource
             'estimated_max_charge' => $this->estimated_max_charge_nanos->toDecimal(),
             'charged' => $this->charged_nanos?->toDecimal(),
             'tokens' => $this->tokenUsage()?->toArray(),
-            'waiting_reason' => $this->waitingReason(),
+            'waiting_reason' => $this->waitingReason($errorCode),
             'error' => $this->status === GenerationStatus::Failed ? [
                 'code' => $this->error_code,
-                'message' => $this->error_message ?? PixelforgeErrorCode::tryFrom((string) $this->error_code)?->userMessage(),
+                'message' => $this->error_message ?? $errorCode?->userMessage(),
             ] : null,
-            'can_retry' => $this->status === GenerationStatus::Failed && ! in_array($this->error_code, self::PERMANENT_FAILURES, true),
+            'can_retry' => $this->status === GenerationStatus::Failed && ! $errorCode?->isPermanent(),
             'image_url' => $this->displayImageUrl(),
             'image_expired' => $this->imageHasExpired(),
             'created_at' => $this->created_at->toIso8601String(),
@@ -47,16 +44,19 @@ class GenerationResource extends JsonResource
         ];
     }
 
-    private function waitingReason(): ?string
+    /**
+     * Why a generation that Pixelforge has not accepted yet is still waiting, if a retry is scheduled.
+     */
+    private function waitingReason(?PixelforgeErrorCode $errorCode): ?string
     {
         if ($this->status !== GenerationStatus::Pending || $this->error_code === null) {
             return null;
         }
 
-        return match ($this->error_code) {
-            'concurrency_limit_exceeded' => 'Waiting for a free slot at the provider',
-            'rate_limit_exceeded' => 'Provider rate limit reached — retrying shortly',
-            'overloaded' => 'Provider overloaded — retrying shortly',
+        return match ($errorCode) {
+            PixelforgeErrorCode::ConcurrencyLimitExceeded => 'Waiting for a free slot at the provider',
+            PixelforgeErrorCode::RateLimitExceeded => 'Provider rate limit reached — retrying shortly',
+            PixelforgeErrorCode::Overloaded => 'Provider overloaded — retrying shortly',
             default => 'Provider not responding — retrying shortly',
         };
     }

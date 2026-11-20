@@ -3,6 +3,7 @@ import { Head, Link } from '@inertiajs/vue3';
 import { ImagePlus } from '@lucide/vue';
 import GenerationCard from '@/components/GenerationCard.vue';
 import Heading from '@/components/Heading.vue';
+import PaginationLinks from '@/components/PaginationLinks.vue';
 import { Button } from '@/components/ui/button';
 import { useLiveUpdates } from '@/composables/useLiveUpdates';
 import { create, index } from '@/routes/generations';
@@ -87,46 +88,6 @@ useLiveUpdates(() => props.hasInFlight, ['generations', 'hasInFlight']);
             </Button>
         </div>
 
-        <nav
-            v-if="generations.meta.last_page > 1"
-            class="flex items-center justify-between text-sm"
-            aria-label="Pagination"
-        >
-            <span class="text-muted-foreground">
-                Page {{ generations.meta.current_page }} of
-                {{ generations.meta.last_page }} ·
-                {{ generations.meta.total }} generations
-            </span>
-            <div class="flex gap-2">
-                <Button
-                    variant="outline"
-                    size="sm"
-                    :disabled="!generations.links.prev"
-                    as-child
-                >
-                    <Link
-                        v-if="generations.links.prev"
-                        :href="generations.links.prev"
-                        preserve-scroll
-                        >Previous</Link
-                    >
-                    <span v-else>Previous</span>
-                </Button>
-                <Button
-                    variant="outline"
-                    size="sm"
-                    :disabled="!generations.links.next"
-                    as-child
-                >
-                    <Link
-                        v-if="generations.links.next"
-                        :href="generations.links.next"
-                        preserve-scroll
-                        >Next</Link
-                    >
-                    <span v-else>Next</span>
-                </Button>
-            </div>
-        </nav>
+        <PaginationLinks :links="generations.links" :meta="generations.meta" />
     </div>
 </template>
