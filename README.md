@@ -4,10 +4,10 @@ A Laravel 13 + Vue 3 + Inertia 3 app where signed-in users generate images throu
 
 Both stretch goals are included: **credit balances** with fake purchases, and an **admin report** that compares our provider costs with Pixelforge's `GET /v1/usage`.
 
-| | |
-|---|---|
-| Stack | Laravel 13.43, PHP 8.4, Inertia 3 (Vue 3.5 + TypeScript), Tailwind 4, Wayfinder, Fortify; MySQL in production, Postgres locally (tests run on both) |
-| Quality | Pest (106 tests), PHPStan/Larastan level 7, Pint, vue-tsc, Vite+ lint/format; GitHub Actions matrix on MySQL + Postgres |
+|         |                                                                                                                                                     |
+| ------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Stack   | Laravel 13.43, PHP 8.4, Inertia 3 (Vue 3.5 + TypeScript), Tailwind 4, Wayfinder, Fortify; MySQL in production, Postgres locally (tests run on both) |
+| Quality | Pest (106 tests), PHPStan/Larastan level 7, Pint, vue-tsc, Vite+ lint/format; GitHub Actions matrix on MySQL + Postgres                             |
 
 ---
 
@@ -61,30 +61,30 @@ On success we charge the actual cost, which is always within the range. On failu
 
 ## Robustness: the edge cases handled
 
-| Situation | Handling |
-|---|---|
-| Webhook delivered twice | `webhook_events.event_id` is unique (`createOrFirst`), so a processed event returns 204 immediately |
-| Same state reported by different paths (webhook + submit response + poll) | `SyncGenerationFromProvider` locks the row; a generation only moves forward, and a final state is settled once |
-| Out-of-order events (`processing` after `succeeded`) | Status has a rank; lower or equal ranks are ignored, and `succeeded`/`failed` are never left |
-| Webhook arrives before `POST /generations` returned | We send `metadata.local_id`; the webhook finds the generation by provider id **or** local id |
-| Webhooks lost entirely | `generations:reconcile` (every minute) polls in-flight generations quiet for >90s |
-| `429 rate_limit` / `429 concurrency_limit` / `503 overloaded` / network timeout | Job is released for `Retry-After` + exponential backoff + jitter, **with the same Idempotency-Key**, so no duplicate is ever created or billed. UI shows "Waiting for a free slot…" |
-| Retries never succeed | Job gives up after 15 minutes (time-based, because waits are releases, not errors). The generation is marked failed at $0 |
-| …but Pixelforge did accept one of those attempts | Its webhook still matches by `local_id`. We record the provider cost (so `/v1/usage` reconciles) but keep our promise not to charge |
-| `400 content_policy` / `422` / `429 daily_limit` / `401` / `409 idempotency_key_reused` | Terminal: failed with a human-readable message, $0, hold released. 401/409 are logged as critical (they mean we have a bug or a misconfiguration) |
-| Generation fails after acceptance (`generation_failed`, `internal_error`) | $0. A **Retry** button creates a new generation; a deterministic request id stops a double-click from creating two |
-| Queue job lost (worker crash, deploy) | Reconciler re-queues `pending` generations that have gone quiet; submission is idempotent |
-| Double-clicked submit | The form sends a `client_request_id` (unique per user), so the same request yields the same generation |
-| Invalid / stale / replayed webhook | HMAC-SHA256 over the raw body, `hash_equals`, 300s tolerance, multiple `v1` values supported. Bad requests get 400; the route is outside the `web` group, so there is no CSRF |
-| Image URLs expire after 24h | `StoreGenerationImage` copies the PNG to our disk (S3/R2 bucket in production). The UI falls back to Pixelforge's URL, then to an "expired" state, and `<img @error>` is handled |
-| Pricing API down | Stale-while-revalidate cache (`Cache::flexible`) plus a last-known-good copy. With neither, generation is paused with a clear message |
-| Unicode prompts | Characters are counted as code points (`mb_strlen` / `[...str].length`), matching Pixelforge, not bytes or UTF-16 units |
-| Validation | Mirrors Pixelforge: prompt ≤ 4000 chars, size/quality enums, ≤ 4 distinct http(s) reference URLs. Empty rows are ignored |
-| Account deleted | `user_id` is set to null on delete, so money records survive for reporting |
+| Situation                                                                               | Handling                                                                                                                                                                            |
+| --------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Webhook delivered twice                                                                 | `webhook_events.event_id` is unique (`createOrFirst`), so a processed event returns 204 immediately                                                                                 |
+| Same state reported by different paths (webhook + submit response + poll)               | `SyncGenerationFromProvider` locks the row; a generation only moves forward, and a final state is settled once                                                                      |
+| Out-of-order events (`processing` after `succeeded`)                                    | Status has a rank; lower or equal ranks are ignored, and `succeeded`/`failed` are never left                                                                                        |
+| Webhook arrives before `POST /generations` returned                                     | We send `metadata.local_id`; the webhook finds the generation by provider id **or** local id                                                                                        |
+| Webhooks lost entirely                                                                  | `generations:reconcile` (every minute) polls in-flight generations quiet for >90s                                                                                                   |
+| `429 rate_limit` / `429 concurrency_limit` / `503 overloaded` / network timeout         | Job is released for `Retry-After` + exponential backoff + jitter, **with the same Idempotency-Key**, so no duplicate is ever created or billed. UI shows "Waiting for a free slot…" |
+| Retries never succeed                                                                   | Job gives up after 15 minutes (time-based, because waits are releases, not errors). The generation is marked failed at $0                                                           |
+| …but Pixelforge did accept one of those attempts                                        | Its webhook still matches by `local_id`. We record the provider cost (so `/v1/usage` reconciles) but keep our promise not to charge                                                 |
+| `400 content_policy` / `422` / `429 daily_limit` / `401` / `409 idempotency_key_reused` | Terminal: failed with a human-readable message, $0, hold released. 401/409 are logged as critical (they mean we have a bug or a misconfiguration)                                   |
+| Generation fails after acceptance (`generation_failed`, `internal_error`)               | $0. A **Retry** button creates a new generation; a deterministic request id stops a double-click from creating two                                                                  |
+| Queue job lost (worker crash, deploy)                                                   | Reconciler re-queues `pending` generations that have gone quiet; submission is idempotent                                                                                           |
+| Double-clicked submit                                                                   | The form sends a `client_request_id` (unique per user), so the same request yields the same generation                                                                              |
+| Invalid / stale / replayed webhook                                                      | HMAC-SHA256 over the raw body, `hash_equals`, 300s tolerance, multiple `v1` values supported. Bad requests get 400; the route is outside the `web` group, so there is no CSRF       |
+| Image URLs expire after 24h                                                             | `StoreGenerationImage` copies the PNG to our disk (S3/R2 bucket in production). The UI falls back to Pixelforge's URL, then to an "expired" state, and `<img @error>` is handled    |
+| Pricing API down                                                                        | Stale-while-revalidate cache (`Cache::flexible`) plus a last-known-good copy. With neither, generation is paused with a clear message                                               |
+| Unicode prompts                                                                         | Characters are counted as code points (`mb_strlen` / `[...str].length`), matching Pixelforge, not bytes or UTF-16 units                                                             |
+| Validation                                                                              | Mirrors Pixelforge: prompt ≤ 4000 chars, size/quality enums, ≤ 4 distinct http(s) reference URLs. Empty rows are ignored                                                            |
+| Account deleted                                                                         | `user_id` is set to null on delete, so money records survive for reporting                                                                                                          |
 
 ## Admin report (stretch goal)
 
-`/admin/report` (users with `is_admin`) shows, per **UTC day of completion** (Pixelforge bills on the day a generation *completes*) and per user: credit spend, provider cost and profit. Each day is compared with `GET /v1/usage` for this environment's API key: ✓ when cost and count match to the nanodollar, ⚠ otherwise. The range is capped at Pixelforge's 92 days, and the report still renders if the usage API is down.
+`/admin/report` (users with `is_admin`) shows, per **UTC day of completion** (Pixelforge bills on the day a generation _completes_) and per user: credit spend, provider cost and profit. Each day is compared with `GET /v1/usage` for this environment's API key: ✓ when cost and count match to the nanodollar, ⚠ otherwise. The range is capped at Pixelforge's 92 days, and the report still renders if the usage API is down.
 
 ## Running locally
 
@@ -117,16 +117,16 @@ composer ci:check   # lint, types (vue-tsc, PHPStan L7), Pint, Pest
 
 ## Code map
 
-| Concern | Where |
-|---|---|
-| Money | `app/Support/Money/Usd.php`, `UsdCast.php` |
-| Pricing, estimates, ledger | `app/Services/Billing/*` |
-| Pixelforge HTTP client, DTOs, errors | `app/Services/Pixelforge/*` |
-| Create → submit → sync (state machine) | `app/Actions/Generations/*`, `app/Jobs/*` |
-| Webhooks | `app/Http/Middleware/VerifyPixelforgeSignature.php`, `app/Http/Controllers/PixelforgeWebhookController.php` |
-| Reconciler | `app/Console/Commands/ReconcileGenerations.php` (scheduled in `routes/console.php`) |
-| Admin report | `app/Services/Reporting/ProfitReport.php` |
-| UI | `resources/js/pages/{generations,credits,admin}`, `resources/js/components/Generation*.vue` |
+| Concern                                | Where                                                                                                       |
+| -------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Money                                  | `app/Support/Money/Usd.php`, `UsdCast.php`                                                                  |
+| Pricing, estimates, ledger             | `app/Services/Billing/*`                                                                                    |
+| Pixelforge HTTP client, DTOs, errors   | `app/Services/Pixelforge/*`                                                                                 |
+| Create → submit → sync (state machine) | `app/Actions/Generations/*`, `app/Jobs/*`                                                                   |
+| Webhooks                               | `app/Http/Middleware/VerifyPixelforgeSignature.php`, `app/Http/Controllers/PixelforgeWebhookController.php` |
+| Reconciler                             | `app/Console/Commands/ReconcileGenerations.php` (scheduled in `routes/console.php`)                         |
+| Admin report                           | `app/Services/Reporting/ProfitReport.php`                                                                   |
+| UI                                     | `resources/js/pages/{generations,credits,admin}`, `resources/js/components/Generation*.vue`                 |
 
 ## Trade-offs and what I'd do next
 

@@ -6,7 +6,8 @@ use App\Http\Controllers\GenerationController;
 use App\Http\Controllers\QuoteController;
 use Illuminate\Support\Facades\Route;
 
-Route::inertia('/', 'Welcome')->name('home');
+// No landing page: guests go to the login screen, signed-in users are sent on to /generate.
+Route::redirect('/', '/login')->name('home');
 
 Route::middleware('auth')->group(function () {
     Route::redirect('dashboard', '/generate')->name('dashboard');
