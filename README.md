@@ -108,8 +108,10 @@ composer ci:check   # lint, types (vue-tsc, PHPStan L7), Pint, Pest
 
 ## Deployment (Laravel Cloud)
 
-- MySQL database, a queue worker (`php artisan queue:work`), and the scheduler enabled.
-- An object storage bucket attached as a disk; set `GENERATION_IMAGE_DISK` to its name.
+- MySQL database attached to the environment (`DB_*` is injected).
+- A **background process** on the app cluster: `php artisan queue:work --sleep=1 --timeout=60`. Without it, generations stay in "Submitting", because nothing sends them to Pixelforge.
+- The **scheduler** enabled on the app cluster (runs `generations:reconcile` every minute).
+- A **public** object storage bucket attached with the disk name `public`. Images are copied there; the server filesystem is ephemeral.
 - Env: `PIXELFORGE_API_KEY`, `PIXELFORGE_WEBHOOK_SECRET` (the production key, separate from local), `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD`.
 - Deploy commands: `php artisan migrate --force` and, on first deploy, `php artisan db:seed --force`.
 
