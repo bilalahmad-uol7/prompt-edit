@@ -1,50 +1,51 @@
 <?php
 
+use App\Services\Pixelforge\Data\Pricing;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
-/*
-|--------------------------------------------------------------------------
-| Test Case
-|--------------------------------------------------------------------------
-|
-| The closure you provide to your test functions is always bound to a specific PHPUnit test
-| case class. By default, that class is "PHPUnit\Framework\TestCase". Of course, you may
-| need to change it using the "pest()" function to bind different classes or traits.
-|
-*/
-
 pest()->extend(TestCase::class)
- // ->use(RefreshDatabase::class)
+    ->use(RefreshDatabase::class)
     ->in('Feature');
 
-/*
-|--------------------------------------------------------------------------
-| Expectations
-|--------------------------------------------------------------------------
-|
-| When you're writing tests, you often need to check that values meet certain conditions. The
-| "expect()" function gives you access to a set of "expectations" methods that you can use
-| to assert different things. Of course, you may extend the Expectation API at any time.
-|
-*/
-
-expect()->extend('toBeOne', function () {
-    return $this->toBe(1);
-});
-
-/*
-|--------------------------------------------------------------------------
-| Functions
-|--------------------------------------------------------------------------
-|
-| While Pest is very powerful out-of-the-box, you may have some testing code specific to your
-| project that you don't want to repeat in every file. Here you can also expose helpers as
-| global functions to help you to reduce the number of lines of code in your test files.
-|
-*/
-
-function something()
+/**
+ * @return array<string, mixed>
+ */
+function pixelforgeFixture(string $name): array
 {
-    // ..
+    return json_decode(file_get_contents(__DIR__."/Fixtures/pixelforge/{$name}.json"), true, flags: JSON_THROW_ON_ERROR);
+}
+
+function pricingFixture(): Pricing
+{
+    return Pricing::fromArray(pixelforgeFixture('pricing'));
+}
+
+/**
+ * A Pixelforge generation object, shaped like the API docs.
+ *
+ * @param  array<string, mixed>  $overrides
+ * @return array<string, mixed>
+ */
+function pixelforgeGeneration(array $overrides = []): array
+{
+    return array_replace([
+        'id' => 'gen_'.Str::random(20),
+        'object' => 'generation',
+        'status' => 'queued',
+        'prompt' => 'A lighthouse at dusk',
+        'size' => '1024x1024',
+        'quality' => 'medium',
+        'reference_images' => [],
+        'metadata' => [],
+        'image_url' => null,
+        'image_url_expires_at' => null,
+        'usage' => null,
+        'rates' => pixelforgeFixture('pricing')['rates'],
+        'error' => null,
+        'created_at' => now()->toIso8601ZuluString(),
+        'started_at' => null,
+        'completed_at' => null,
+    ], $overrides);
 }
