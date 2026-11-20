@@ -6,8 +6,8 @@ Both stretch goals are included: **credit balances** with fake purchases, and an
 
 | | |
 |---|---|
-| Stack | Laravel 13.43, PHP 8.4, Inertia 3 (Vue 3.5 + TypeScript), Tailwind 4, Wayfinder, Fortify, Postgres |
-| Quality | Pest (106 tests), PHPStan/Larastan level 7, Pint, vue-tsc, Vite+ lint/format; GitHub Actions on Postgres |
+| Stack | Laravel 13.43, PHP 8.4, Inertia 3 (Vue 3.5 + TypeScript), Tailwind 4, Wayfinder, Fortify; MySQL in production, Postgres locally (tests run on both) |
+| Quality | Pest (106 tests), PHPStan/Larastan level 7, Pint, vue-tsc, Vite+ lint/format; GitHub Actions matrix on MySQL + Postgres |
 
 ---
 
@@ -91,7 +91,7 @@ On success we charge the actual cost, which is always within the range. On failu
 ```bash
 composer install && npm install
 cp .env.example .env && php artisan key:generate
-# Postgres: createdb larajob && createdb larajob_test
+# Postgres (or MySQL — set DB_* in .env): createdb larajob && createdb larajob_test
 php artisan migrate --seed            # admin@example.com / password (local only)
 php artisan storage:link
 composer run dev                      # app + queue worker + vite
@@ -108,7 +108,7 @@ composer ci:check   # lint, types (vue-tsc, PHPStan L7), Pint, Pest
 
 ## Deployment (Laravel Cloud)
 
-- Postgres database, a queue worker (`php artisan queue:work`), and the scheduler enabled.
+- MySQL database, a queue worker (`php artisan queue:work`), and the scheduler enabled.
 - An object storage bucket attached as a disk; set `GENERATION_IMAGE_DISK` to its name.
 - Env: `PIXELFORGE_API_KEY`, `PIXELFORGE_WEBHOOK_SECRET` (the production key, separate from local), `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD`.
 - Deploy commands: `php artisan migrate --force` and, on first deploy, `php artisan db:seed --force`.

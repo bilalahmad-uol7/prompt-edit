@@ -28,6 +28,7 @@
         <env name="PIXELFORGE_API_KEY" value="pk_test_key"/>
         <env name="PIXELFORGE_WEBHOOK_SECRET" value="whsec_test_secret"/>
         <env name="GENERATION_IMAGE_DISK" value="public"/>
+        <env name="INERTIA_SSR_ENABLED" value="false"/>
         <env name="DB_URL" value=""/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>

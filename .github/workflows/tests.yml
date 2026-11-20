@@ -13,7 +13,25 @@ jobs:
   ci:
     runs-on: ubuntu-latest
 
+    # Production runs on MySQL (Laravel Cloud); keep the suite green on Postgres too.
+    strategy:
+      fail-fast: false
+      matrix:
+        database: [mysql, pgsql]
+
     services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_DATABASE: larajob_test
+          MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
       postgres:
         image: postgres:17
         env:
@@ -28,11 +46,11 @@ jobs:
           --health-retries 10
 
     env:
-      DB_CONNECTION: pgsql
+      DB_CONNECTION: ${{ matrix.database }}
       DB_HOST: 127.0.0.1
-      DB_PORT: 5432
+      DB_PORT: ${{ matrix.database == 'mysql' && '3306' || '5432' }}
       DB_DATABASE: larajob_test
-      DB_USERNAME: postgres
+      DB_USERNAME: ${{ matrix.database == 'mysql' && 'root' || 'postgres' }}
       DB_PASSWORD: ''
 
     steps:
