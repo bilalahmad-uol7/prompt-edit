@@ -18,8 +18,8 @@ class DatabaseSeeder extends Seeder
      */
     public function run(CreditLedger $ledger): void
     {
-        $email = env('SEED_ADMIN_EMAIL', 'admin@example.com');
-        $password = env('SEED_ADMIN_PASSWORD') ?: (app()->isProduction() ? Str::password(20) : 'password');
+        $email = (string) config('app.seed_admin.email');
+        $password = config('app.seed_admin.password') ?: (app()->isProduction() ? Str::password(20) : 'password');
 
         $admin = User::query()->firstOrCreate(['email' => $email], [
             'name' => 'Operator',

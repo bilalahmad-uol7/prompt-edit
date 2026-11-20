@@ -118,6 +118,21 @@ return [
     |
     */
 
+    /*
+    |--------------------------------------------------------------------------
+    | Seeded Operator Account
+    |--------------------------------------------------------------------------
+    |
+    | Credentials for the admin account created by the database seeder. In
+    | production, set both; otherwise a random password is generated.
+    |
+    */
+
+    'seed_admin' => [
+        'email' => env('SEED_ADMIN_EMAIL', 'admin@example.com'),
+        'password' => env('SEED_ADMIN_PASSWORD'),
+    ],
+
     'maintenance' => [
         'driver' => env('APP_MAINTENANCE_DRIVER', 'file'),
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
